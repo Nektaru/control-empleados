@@ -22,13 +22,13 @@ def parse_time_to_minutes(text):
     return h * 60 + m
 
 def clean_work_time(minutes):
-    return 240 <= minutes <= 480  # 4h a 8h
+    return 240 <= minutes <= 480
 
 def clean_break(minutes):
     return 5 <= minutes <= 40
 
 def clean_delay(minutes):
-    return -60 <= minutes <= 60  # permitir negativos, eliminar extremos
+    return -60 <= minutes <= 60
 
 def parse_start_time(line):
     try:
@@ -135,6 +135,7 @@ if uploaded_files:
     colors = ["#d4ad24", "#263D4B", "#8c1c13", "#3a7d44", "#6a4c93", "#ff8800"]
 
     # -------- GRAFICO 1: HORAS --------
+    plt.clf()
     fig1, ax1 = plt.subplots()
 
     bars = ax1.bar(names, avg_work, color=colors[:len(names)])
@@ -151,13 +152,14 @@ if uploaded_files:
             bar.get_x() + bar.get_width()/2,
             val + (margin * 0.3),
             f"{val:.2f}h",
-            ha='center',
-            va='bottom'
+            ha='center'
         )
 
     st.pyplot(fig1)
+    plt.close()
 
     # -------- GRAFICO 2: DESCANSO --------
+    plt.clf()
     fig2, ax2 = plt.subplots()
 
     bars = ax2.bar(names, avg_break, color=colors[:len(names)])
@@ -173,26 +175,25 @@ if uploaded_files:
         )
 
     st.pyplot(fig2)
-
-# -------- GRAFICO 3: RETRASOS --------
-
-if any(avg_delay):
-
-    plt.clf()
-    fig3, ax3 = plt.subplots()
-
-    bars = ax3.bar(names, avg_delay, color=colors[:len(names)])
-    ax3.set_title("Retrasos")
-
-    for bar, val in zip(bars, avg_delay):
-        offset = 0.5 if val >= 0 else -0.5
-        ax3.text(
-            bar.get_x() + bar.get_width()/2,
-            val + offset,
-            f"{val:.1f}m",
-            ha='center'
-        )
-
-    st.pyplot(fig3)
     plt.close()
-    st.pyplot(fig3)
+
+    # -------- GRAFICO 3: RETRASOS --------
+    if any(avg_delay):
+
+        plt.clf()
+        fig3, ax3 = plt.subplots()
+
+        bars = ax3.bar(names, avg_delay, color=colors[:len(names)])
+        ax3.set_title("Retrasos")
+
+        for bar, val in zip(bars, avg_delay):
+            offset = 0.5 if val >= 0 else -0.5
+            ax3.text(
+                bar.get_x() + bar.get_width()/2,
+                val + offset,
+                f"{val:.1f}m",
+                ha='center'
+            )
+
+        st.pyplot(fig3)
+        plt.close()
