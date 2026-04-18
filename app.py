@@ -174,7 +174,11 @@ if uploaded_files:
 
     st.pyplot(fig2)
 
-    # -------- GRAFICO 3: RETRASOS --------
+# -------- GRAFICO 3: RETRASOS --------
+
+if any(avg_delay):
+
+    plt.clf()
     fig3, ax3 = plt.subplots()
 
     bars = ax3.bar(names, avg_delay, color=colors[:len(names)])
@@ -189,4 +193,6 @@ if uploaded_files:
             ha='center'
         )
 
+    st.pyplot(fig3)
+    plt.close()
     st.pyplot(fig3)
