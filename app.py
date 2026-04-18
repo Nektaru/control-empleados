@@ -22,10 +22,13 @@ def parse_time_to_minutes(text):
     return h * 60 + m
 
 def clean_work_time(minutes):
-    return 240 <= minutes <= 480
+    return 240 <= minutes <= 480  # 4h a 8h
 
 def clean_break(minutes):
     return 5 <= minutes <= 40
+
+def clean_delay(minutes):
+    return -60 <= minutes <= 60  # permitir negativos, eliminar extremos
 
 def parse_start_time(line):
     try:
@@ -59,17 +62,14 @@ if uploaded_files:
 
         for i, line in enumerate(lines):
 
-            # -------- INICIO JORNADA (ROBUSTO) --------
+            # -------- INICIO JORNADA --------
             if "Inicio de jornada" in line:
 
                 time_str = None
 
-                # Caso normal
                 parts = line.split(" ")
                 if len(parts) > 0 and ":" in parts[0]:
                     time_str = parts[0]
-
-                # Caso roto (hora en línea anterior)
                 elif i > 0:
                     prev_line = lines[i-1].strip()
                     if ":" in prev_line:
@@ -80,9 +80,11 @@ if uploaded_files:
                 if start_time:
                     target = datetime.strptime("09:30", "%H:%M") if name.lower() == "diana" else datetime.strptime("09:00", "%H:%M")
                     delay = (start_time - target).total_seconds() / 60
-                    employees_data[name]["delay"].append(delay)
 
-            # -------- HORAS TRABAJADAS --------
+                    if clean_delay(delay):
+                        employees_data[name]["delay"].append(delay)
+
+            # -------- HORAS --------
             if "Total tiempo trabajado" in line:
                 try:
                     minutes = parse_time_to_minutes(line)
@@ -134,22 +136,30 @@ if uploaded_files:
 
     # -------- GRAFICO 1: HORAS --------
     fig1, ax1 = plt.subplots()
+
     bars = ax1.bar(names, avg_work, color=colors[:len(names)])
-    ax1.set_ylim(5.5, 6.6)
+
+    min_y = 5.5
+    max_y = max(avg_work) if avg_work else 6
+    margin = 0.1
+
+    ax1.set_ylim(min_y, max_y + margin)
     ax1.set_title("Horas trabajadas")
 
     for bar, val in zip(bars, avg_work):
         ax1.text(
             bar.get_x() + bar.get_width()/2,
-            val + 0.01,
+            val + (margin * 0.3),
             f"{val:.2f}h",
-            ha='center'
+            ha='center',
+            va='bottom'
         )
 
     st.pyplot(fig1)
 
     # -------- GRAFICO 2: DESCANSO --------
     fig2, ax2 = plt.subplots()
+
     bars = ax2.bar(names, avg_break, color=colors[:len(names)])
     ax2.set_ylim(10, 20)
     ax2.set_title("Descanso medio")
@@ -166,13 +176,15 @@ if uploaded_files:
 
     # -------- GRAFICO 3: RETRASOS --------
     fig3, ax3 = plt.subplots()
+
     bars = ax3.bar(names, avg_delay, color=colors[:len(names)])
     ax3.set_title("Retrasos")
 
     for bar, val in zip(bars, avg_delay):
+        offset = 0.5 if val >= 0 else -0.5
         ax3.text(
             bar.get_x() + bar.get_width()/2,
-            val + 0.5 if val >= 0 else val - 0.5,
+            val + offset,
             f"{val:.1f}m",
             ha='center'
         )
