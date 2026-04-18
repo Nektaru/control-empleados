@@ -22,7 +22,7 @@ def parse_time_to_minutes(text):
     return h * 60 + m
 
 def clean_work_time(minutes):
-    return 240 <= minutes <= 480  # entre 4h y 8h
+    return 240 <= minutes <= 480
 
 def clean_break(minutes):
     return 5 <= minutes <= 40
@@ -49,7 +49,6 @@ if uploaded_files:
             "delay": []
         }
 
-        # 🔥 LECTURA REAL DEL PDF
         pdf = fitz.open(stream=file.read(), filetype="pdf")
 
         text = ""
@@ -70,7 +69,7 @@ if uploaded_files:
                     delay = (start_time - target).total_seconds() / 60
                     employees_data[name]["delay"].append(delay)
 
-            # ---- HORAS TRABAJADAS ----
+            # ---- HORAS ----
             if "Total tiempo trabajado" in line:
                 try:
                     minutes = parse_time_to_minutes(line)
@@ -100,18 +99,34 @@ if uploaded_files:
     avg_delay = []
 
     for name, data in employees_data.items():
+
         if len(data["work"]) == 0:
             continue
 
         names.append(name)
-        avg_work.append(sum(data["work"]) / len(data["work"]))
-        avg_break.append(sum(data["break"]) / len(data["break"]))
-        avg_delay.append(sum(data["delay"]) / len(data["delay"]))
 
-    # COLORES (marca + diferenciación)
+        # HORAS
+        avg_work.append(
+            sum(data["work"]) / len(data["work"])
+            if len(data["work"]) > 0 else 0
+        )
+
+        # DESCANSO
+        avg_break.append(
+            sum(data["break"]) / len(data["break"])
+            if len(data["break"]) > 0 else 0
+        )
+
+        # RETRASOS
+        avg_delay.append(
+            sum(data["delay"]) / len(data["delay"])
+            if len(data["delay"]) > 0 else 0
+        )
+
+    # COLORES
     colors = ["#d4ad24", "#263D4B", "#8c1c13", "#3a7d44", "#6a4c93", "#ff8800"]
 
-    # -------- GRAFICO 1: HORAS --------
+    # -------- GRAFICO 1 --------
     fig1, ax1 = plt.subplots()
     bars = ax1.bar(names, avg_work, color=colors[:len(names)])
     ax1.set_ylim(5.5, 6.5)
@@ -122,7 +137,7 @@ if uploaded_files:
 
     st.pyplot(fig1)
 
-    # -------- GRAFICO 2: DESCANSO --------
+    # -------- GRAFICO 2 --------
     fig2, ax2 = plt.subplots()
     bars = ax2.bar(names, avg_break, color=colors[:len(names)])
     ax2.set_ylim(10, 20)
@@ -133,7 +148,7 @@ if uploaded_files:
 
     st.pyplot(fig2)
 
-    # -------- GRAFICO 3: RETRASOS --------
+    # -------- GRAFICO 3 --------
     fig3, ax3 = plt.subplots()
     bars = ax3.bar(names, avg_delay, color=colors[:len(names)])
     ax3.set_title("Retrasos")
