@@ -41,7 +41,7 @@ if uploaded_files:
 
     for file in uploaded_files:
 
-        name = file.name.split(" ")[0]
+        name = file.name.split(" ")[0].replace(".pdf", "")
 
         employees_data[name] = {
             "work": [],
@@ -57,19 +57,32 @@ if uploaded_files:
 
         lines = text.split("\n")
 
-        for line in lines:
+        for i, line in enumerate(lines):
 
-            # ---- INICIO JORNADA ----
+            # -------- INICIO JORNADA (ROBUSTO) --------
             if "Inicio de jornada" in line:
-                time_str = line.split(" ")[0]
-                start_time = parse_start_time(time_str)
+
+                time_str = None
+
+                # Caso normal
+                parts = line.split(" ")
+                if len(parts) > 0 and ":" in parts[0]:
+                    time_str = parts[0]
+
+                # Caso roto (hora en línea anterior)
+                elif i > 0:
+                    prev_line = lines[i-1].strip()
+                    if ":" in prev_line:
+                        time_str = prev_line
+
+                start_time = parse_start_time(time_str) if time_str else None
 
                 if start_time:
                     target = datetime.strptime("09:30", "%H:%M") if name.lower() == "diana" else datetime.strptime("09:00", "%H:%M")
                     delay = (start_time - target).total_seconds() / 60
                     employees_data[name]["delay"].append(delay)
 
-            # ---- HORAS ----
+            # -------- HORAS TRABAJADAS --------
             if "Total tiempo trabajado" in line:
                 try:
                     minutes = parse_time_to_minutes(line)
@@ -78,7 +91,7 @@ if uploaded_files:
                 except:
                     pass
 
-            # ---- DESCANSO ----
+            # -------- DESCANSO --------
             if "Total tiempo en pausa" in line:
                 try:
                     if "Menos de un minuto" in line:
@@ -105,55 +118,63 @@ if uploaded_files:
 
         names.append(name)
 
-        # HORAS
         avg_work.append(
-            sum(data["work"]) / len(data["work"])
-            if len(data["work"]) > 0 else 0
+            sum(data["work"]) / len(data["work"]) if len(data["work"]) > 0 else 0
         )
 
-        # DESCANSO
         avg_break.append(
-            sum(data["break"]) / len(data["break"])
-            if len(data["break"]) > 0 else 0
+            sum(data["break"]) / len(data["break"]) if len(data["break"]) > 0 else 0
         )
 
-        # RETRASOS
         avg_delay.append(
-            sum(data["delay"]) / len(data["delay"])
-            if len(data["delay"]) > 0 else 0
+            sum(data["delay"]) / len(data["delay"]) if len(data["delay"]) > 0 else 0
         )
 
-    # COLORES
     colors = ["#d4ad24", "#263D4B", "#8c1c13", "#3a7d44", "#6a4c93", "#ff8800"]
 
-    # -------- GRAFICO 1 --------
+    # -------- GRAFICO 1: HORAS --------
     fig1, ax1 = plt.subplots()
     bars = ax1.bar(names, avg_work, color=colors[:len(names)])
-    ax1.set_ylim(5.5, 6.5)
+    ax1.set_ylim(5.5, 6.6)
     ax1.set_title("Horas trabajadas")
 
     for bar, val in zip(bars, avg_work):
-        ax1.text(bar.get_x() + bar.get_width()/2, val, f"{val:.2f}h", ha='center')
+        ax1.text(
+            bar.get_x() + bar.get_width()/2,
+            val + 0.01,
+            f"{val:.2f}h",
+            ha='center'
+        )
 
     st.pyplot(fig1)
 
-    # -------- GRAFICO 2 --------
+    # -------- GRAFICO 2: DESCANSO --------
     fig2, ax2 = plt.subplots()
     bars = ax2.bar(names, avg_break, color=colors[:len(names)])
     ax2.set_ylim(10, 20)
     ax2.set_title("Descanso medio")
 
     for bar, val in zip(bars, avg_break):
-        ax2.text(bar.get_x() + bar.get_width()/2, val, f"{val:.1f}m", ha='center')
+        ax2.text(
+            bar.get_x() + bar.get_width()/2,
+            val + 0.3,
+            f"{val:.1f}m",
+            ha='center'
+        )
 
     st.pyplot(fig2)
 
-    # -------- GRAFICO 3 --------
+    # -------- GRAFICO 3: RETRASOS --------
     fig3, ax3 = plt.subplots()
     bars = ax3.bar(names, avg_delay, color=colors[:len(names)])
     ax3.set_title("Retrasos")
 
     for bar, val in zip(bars, avg_delay):
-        ax3.text(bar.get_x() + bar.get_width()/2, val, f"{val:.1f}m", ha='center')
+        ax3.text(
+            bar.get_x() + bar.get_width()/2,
+            val + 0.5 if val >= 0 else val - 0.5,
+            f"{val:.1f}m",
+            ha='center'
+        )
 
     st.pyplot(fig3)
